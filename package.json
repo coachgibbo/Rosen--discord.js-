@@ -1,0 +1,23 @@
+{
+  "name": "rosen-discord.js",
+  "version": "1.0.0",
+  "description": "A discord bot that integrates Youtube and Spotify for a smart listening experience",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coachgibbo/Rosen--discord.js-.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/coachgibbo/Rosen--discord.js-/issues"
+  },
+  "homepage": "https://github.com/coachgibbo/Rosen--discord.js-#readme",
+  "dependencies": {
+    "discord.js": "^13.1.0",
+    "dotenv": "^10.0.0"
+  }
+}
