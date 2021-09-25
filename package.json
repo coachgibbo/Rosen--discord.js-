@@ -1,12 +1,11 @@
 {
   "name": "rosen-discord.js",
   "version": "1.0.0",
-  "type": "module",
   "description": "A discord bot that integrates Youtube and Spotify for a smart listening experience",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.ts"
   },
   "repository": {
     "type": "git",
