@@ -1,6 +1,7 @@
 // Import the relevant discord.js modules
 const { Client, Intents } = require('discord.js');
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');
+
 
 // Get environment variables from dotenv config
 dotenv.config();
@@ -15,7 +16,7 @@ const client = new Client({
 
 // Prints to console.log when the 'ready' event is completed
 // 'ready' is when bot turns on
-client.on('ready', () => {
+client.once('ready', () => {
 	console.log('Rosen is awake');
 });
 

@@ -2,15 +2,18 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
-import dotenv from 'dotenv';
+const dotenv = require('dotenv');
 
 // Get environemnt variables from dotenv config
 dotenv.config()
 
 // Create the list of commands and give them basic metadata
 const commands = [
-	new SlashCommandBuilder().setName('ping').setDescription('Replies with pong!'),
-	new SlashCommandBuilder().setName('user').setDescription('Replies with user information!')
+	new SlashCommandBuilder().setName('join').setDescription('Joins the user\'s voice channel'),
+	new SlashCommandBuilder().setName('leave').setDescription('Leaves the user\'s voice channel'),
+	new SlashCommandBuilder().setName('play').setDescription('Play a song'),
+	new SlashCommandBuilder().setName('search').setDescription('Search for a song and play it'),
+	new SlashCommandBuilder().setName('skip').setDescription('Skip the currently playing song'),
 ]
 	.map(command => command.toJSON());
 
