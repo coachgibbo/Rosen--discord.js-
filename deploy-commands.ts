@@ -14,6 +14,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Create the commands array and read the command files from the commands directory
+// Filters out non-TypeScript files
 const commands = [];
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.ts'));
 

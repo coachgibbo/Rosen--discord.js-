@@ -28,29 +28,18 @@ for (const file of commandFiles) {
 	client.commands.set(command.data.name, command);
 }
 
-// Prints to console.log when the 'ready' event is completed
-// 'ready' = when bot turns on
-client.once('ready', () => {
-	console.log('Rosen is awake');
-});
+// Reads the event files from the events directory and filters out non-ts files
+const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.ts'));
 
-// Handles what to do on an 'interaction' event
-// 'interaction' = a message being sent
-client.on('interactionCreate', async (interaction: CommandInteraction) => {
-	if (!interaction.isCommand()) return; // Exits instantly if not a command
-	
-	const command = client.commands.get(interaction.commandName); // Retrieves command from client
-
-	if (!command) return; // Exits if command doesn't exist
-
-	// Execute command, catch any errors that occur during operation
-	try {
-		await command.execute(interaction)
-	} catch {
-		console.error(Error);
-		await interaction.reply({ content: "Something went wrong buddy" });
+// Iterate through eventfiles and designate what to do for each event
+for (const file of eventFiles) {
+	const event = require(`./events/${file}`);
+	if (event.once) {
+		client.once(event.name, (...args: []) => event.execute(...args));
+	} else {
+		client.on(event.name, (...args: []) => event.execute(...args));
 	}
-});
+}
 
 // Use client token to login to discord
 client.login(process.env.TOKEN);

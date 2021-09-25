@@ -9,6 +9,6 @@ module.exports = {
 		.setName('join') // Command Name
 		.setDescription('Joins the user\'s voice channel'), // Command Desc (Shown in disc)
 	async execute(interaction: CommandInteraction) {
-		await interaction.reply('Pong!'); // Reply to the interaction (message)
+		await interaction.reply('Joining'); // Reply to the interaction (message)
 	}
 }
