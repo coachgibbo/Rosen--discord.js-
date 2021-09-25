@@ -12,7 +12,15 @@ const client = new Client({
 		Intents.FLAGS.GUILDS,
 		Intents.FLAGS.GUILD_MESSAGES,
 	],
-});
+}) as any;
+
+client.commands = new Collection();
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.ts'));
+
+for (const file of commandFiles) {
+	const command = require(`./commands/${file}`);
+	client.commands.set(command.data.name, command);
+}
 
 // Prints to console.log when the 'ready' event is completed
 // 'ready' is when bot turns on
@@ -20,13 +28,18 @@ client.once('ready', () => {
 	console.log('Rosen is awake');
 });
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction: CommandInteraction) => {
 	if (!interaction.isCommand()) return;
 	
-	const { commandName } = interaction;
+	const command = client.commands.get(interaction.commandName);
 
-	if (commandName === 'join'){
-		await interaction.reply('Pong!');
+	if (!command) return;
+
+	try {
+		await command.execute(interaction)
+	} catch {
+		console.error(Error);
+		await interaction.reply({ content: "Something went wrong buddy" });
 	}
 });
 
