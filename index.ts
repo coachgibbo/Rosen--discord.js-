@@ -1,6 +1,6 @@
 // Import the relevant discord.js modules
 const { Client, Intents } = require('discord.js');
-const dotenv = require('dotenv');
+import dotenv from 'dotenv';
 
 // Get environment variables from dotenv config
 dotenv.config();
