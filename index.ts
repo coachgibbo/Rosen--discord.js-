@@ -1,7 +1,7 @@
-// Import the relevant discord.js modules
-const { Client, Intents } = require('discord.js');
-const dotenv = require('dotenv');
-
+import { CommandInteraction } from "discord.js";
+import fs from 'fs';
+import {Client, Collection, Intents } from 'discord.js';
+import dotenv from 'dotenv';
 
 // Get environment variables from dotenv config
 dotenv.config();
@@ -18,6 +18,16 @@ const client = new Client({
 // 'ready' is when bot turns on
 client.once('ready', () => {
 	console.log('Rosen is awake');
+});
+
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isCommand()) return;
+	
+	const { commandName } = interaction;
+
+	if (commandName === 'join'){
+		await interaction.reply('Pong!');
+	}
 });
 
 // Use client token to login to discord
