@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.ts",
     "updatecommands": "ts-node ./scripts/deploy-commands.ts",
-    "lazy": "ts-node ./scripts/lazy-test.ts"
+    "voicedependencies": "ts-node ./scripts/voice-dependency-check.ts"
   },
   "repository": {
     "type": "git",
