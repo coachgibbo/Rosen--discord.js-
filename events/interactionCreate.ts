@@ -14,7 +14,11 @@ module.exports = {
 			await command.execute(interaction)
 		} catch {
 			console.error(Error);
-			await interaction.reply({ content: "Something went wrong buddy" });
+			if (interaction.replied) {
+				await interaction.editReply({ content: "Something went wrong buddy" });
+			} else {
+				await interaction.reply({ content: "Something went wrong buddy" });
+			}
 		}
 	},
 };
