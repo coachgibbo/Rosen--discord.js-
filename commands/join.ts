@@ -17,7 +17,7 @@ module.exports = {
 			await interaction.reply(`You're not in a voice channel`);
 			return;
 		} else {
-			await interaction.reply(`Joining ${userChannel!.name}`);
+			await interaction.reply(`Joining ${userChannel!.name}  :orange_circle:`);
 		}
 
 		// Create the VoiceConnection and set channel parameters from caller
@@ -31,7 +31,7 @@ module.exports = {
 		// Return it if connection is successful
 		try{
 			await entersState(connection, VoiceConnectionStatus.Ready, 15e3);
-			await interaction.editReply(`Joined ${userChannel!.name}`);
+			await interaction.editReply(`Joined ${userChannel!.name}  :green_circle:`);
 			return connection;
 		} catch (error) {
 			connection.destroy();
