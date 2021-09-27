@@ -21,7 +21,7 @@ module.exports = {
 			return;
 		} else {
 			connection.destroy();
-			await interaction.reply(`Kicked by ${interaction.user.username}`);
+			await interaction.reply(`Disconnected by ${interaction.user.username}`);
 		}
 	}
 }
