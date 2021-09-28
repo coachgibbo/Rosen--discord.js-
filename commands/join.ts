@@ -3,7 +3,8 @@
  */
 import { CommandInteraction, GuildMember } from "discord.js";
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { DiscordGatewayAdapterCreator, entersState, joinVoiceChannel, VoiceConnectionStatus } from "@discordjs/voice";
+
+const JoinUtility = require("../utilities/joinChannel");
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
@@ -20,22 +21,6 @@ module.exports = {
 			await interaction.reply(`Joining ${userChannel!.name}  :orange_circle:`);
 		}
 
-		// Create the VoiceConnection and set channel parameters from caller
-		const connection = joinVoiceChannel({
-			channelId: userChannel?.id as string,
-			guildId: userChannel?.guildId as string,
-			adapterCreator: userChannel?.guild.voiceAdapterCreator as DiscordGatewayAdapterCreator,
-		});
-
-		// Catch if the bot doesn't connect and destroy the connection
-		// Return it if connection is successful
-		try{
-			await entersState(connection, VoiceConnectionStatus.Ready, 15e3);
-			await interaction.editReply(`Joined ${userChannel!.name}  :green_circle:`);
-			return connection;
-		} catch (error) {
-			connection.destroy();
-			throw error;
-		}
+		JoinUtility.joinChannel(interaction);
 	}
 }
