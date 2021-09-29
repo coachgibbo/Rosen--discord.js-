@@ -25,4 +25,4 @@ function loadYoutube(query: string) {
 	return youtube.search.list(params);
 }
 
-module.exports = { loadYoutube };
+module.exports = { loadYoutube }

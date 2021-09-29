@@ -8,9 +8,10 @@
  * 		6. Plays the song
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { CommandInteraction } from "discord.js";
-import { AudioPlayerStatus, createAudioPlayer, getVoiceConnection } from "@discordjs/voice";
+import { CommandInteraction, GuildMember } from "discord.js";
+import { createAudioPlayer, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../resources/Song";
+import { players } from "../resources/Player";
 
 const YoutubeSearch = require("../utilities/YoutubeSearch");
 const JoinUtility = require("../utilities/joinChannel");
@@ -21,6 +22,12 @@ module.exports = {
 		.setDescription('Plays a song off YouTube') // Command Desc (Shown in disc)
 		.addStringOption(option => option.setName('song').setDescription("The song to search for").setRequired(true)),
 	async execute(interaction: CommandInteraction) {
+		// Gate Clause if caller is not in a voice channel
+		if (!((interaction.member as GuildMember).voice.channel)) {
+			await interaction.reply("Join a voice channel first");
+			return;
+		}
+
 		// Extract search query and update caller on command status
 		const searchQuery = interaction.options.getString('song');
 		await interaction.reply(`Searching for ${searchQuery} :orange_circle:`)
@@ -32,29 +39,42 @@ module.exports = {
 		await interaction.editReply(`Song retrieved with id: ${videoId} :green_circle:`);
 
 		// Create a Song object with information necessary for playing the track
-		const resource = new Song({
+		const song = new Song({
 			id: videoId,
 			title: searchResults.data.items[0].snippet.title,
 			onStart: () => { },
 			onFinish: () => { },
 			onError: () => { }
-		}).createAudioResource();
+		});
 
-		// Create a discord audio player and load the audio resource
-		// Maybe move this into join and leave commands
-		const player = createAudioPlayer();
-		player.play(resource)
+		// Creates an AudioResource to be used with an AudioPlayer
+		const stream = song.createAudioResource()
+
+		// Retrieves this servers player from the players Map. Create and store one if none exists
+		let player = players.get(interaction.guildId!);
+		if (!player) { 
+			player = createAudioPlayer();
+			players.set(interaction.guildId!, player);
+		}
+		player.play(stream)
 		
 		// Check if voice connection exists and joins if not. Connect player to connection
 		let connection = getVoiceConnection(interaction.guildId!)
-		if (!connection) {
-			connection = await JoinUtility.joinChannel(interaction);
+		
+		// If not connected to a server or VoiceConnectionStatus has become disconnected from being idle,
+		// Run the JoinUtility to join the server. Wrapped in a try-catch in case something goes wrong.
+		try {
+			if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
+				connection = await JoinUtility.joinChannel(interaction);
+			}
+			
+		} catch (error) {
+			throw error;
 		}
+		
+		// Once connection is retrieved, subscribe the AudioPlayer.
 		connection?.subscribe(player)
 
-		// Once this works completely, delete reply and use an embed for now playing
-		await interaction.editReply(`Now Playing: ${searchResults.data.items[0].snippet.title}`)
-
-		player.on(AudioPlayerStatus.Idle, () => console.log("Song Finished"));
+		interaction.editReply(`Now Playing: ${song.title}`)
 	}
 }
