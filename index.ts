@@ -2,14 +2,12 @@
  * The main file for the Rosen bot. Creates and runs the Discord client and
  * initializes command and event handling.
  */
-import { CommandInteraction } from "discord.js";
 import fs from 'fs';
 import {Client, Collection, Intents } from 'discord.js';
 import dotenv from 'dotenv';
 
 // Set AbortController as we're using Node v14 due to ytdl problems with v16
 global.AbortController = require("node-abort-controller").AbortController;
-
 
 // Get environment variables from .env config
 dotenv.config();

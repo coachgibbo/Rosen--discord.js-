@@ -6,8 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.ts",
-    "updatecommands": "ts-node deploy-commands.ts",
-    "voicedependencies": "ts-node ./scripts/voice-dependency-check.ts"
+    "uc": "ts-node deploy-commands.ts",
+    "vd": "ts-node ./scripts/voice-dependency-check.ts",
+    "v": "node -v"
   },
   "repository": {
     "type": "git",
@@ -30,7 +31,7 @@
     "dotenv": "^10.0.0",
     "googleapis": "^87.0.0",
     "libsodium-wrappers": "^0.7.9",
-    "node": "^14.17.6",
+    "node": "^16.10.0",
     "node-abort-controller": "^3.0.0",
     "opusscript": "^0.0.8",
     "tweetnacl": "^1.0.3",
