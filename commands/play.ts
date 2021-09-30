@@ -9,9 +9,10 @@
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { CommandInteraction, GuildMember } from "discord.js";
-import { createAudioPlayer, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
+import { AudioPlayerStatus, createAudioPlayer, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../resources/Song";
-import { players } from "../resources/Player";
+import { players } from "../resources/TempStorage";
+import { MusicPlayer } from "../resources/MusicPlayer";
 
 const YoutubeSearch = require("../utilities/YoutubeSearch");
 const JoinUtility = require("../utilities/joinChannel");
@@ -47,16 +48,19 @@ module.exports = {
 			onError: () => { }
 		});
 
-		// Creates an AudioResource to be used with an AudioPlayer
-		const stream = song.createAudioResource()
-
 		// Retrieves this servers player from the players Map. Create and store one if none exists
-		let player = players.get(interaction.guildId!);
-		if (!player) { 
-			player = createAudioPlayer();
-			players.set(interaction.guildId!, player);
+		let musicPlayer = players.get(interaction.guildId!);
+		if (!musicPlayer) { 
+			musicPlayer = new MusicPlayer();
+			players.set(interaction.guildId!, musicPlayer);
 		}
-		player.play(stream)
+
+		musicPlayer.addToQueue(song)
+		if (musicPlayer.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+			interaction.editReply(`Added ${song.title} to queue in position ${musicPlayer.queueSize}`)
+			return;
+		}
+		musicPlayer.play()
 		
 		// Check if voice connection exists and joins if not. Connect player to connection
 		let connection = getVoiceConnection(interaction.guildId!)
@@ -73,7 +77,7 @@ module.exports = {
 		}
 		
 		// Once connection is retrieved, subscribe the AudioPlayer.
-		connection?.subscribe(player)
+		connection?.subscribe(musicPlayer.audioPlayer)
 
 		interaction.editReply(`Now Playing: ${song.title}`)
 	}

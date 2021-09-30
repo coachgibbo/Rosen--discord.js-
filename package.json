@@ -31,7 +31,7 @@
     "dotenv": "^10.0.0",
     "googleapis": "^87.0.0",
     "libsodium-wrappers": "^0.7.9",
-    "node": "^16.10.0",
+    "node": "^14.18.0",
     "node-abort-controller": "^3.0.0",
     "opusscript": "^0.0.8",
     "tweetnacl": "^1.0.3",
