@@ -34,10 +34,13 @@
     "node": "^14.18.0",
     "node-abort-controller": "^3.0.0",
     "opusscript": "^0.0.8",
+    "spotify-web-api-node": "^5.0.2",
     "tweetnacl": "^1.0.3",
-    "ytdl-core": "^4.9.1"
+    "ytdl-core": "^4.9.1",
+    "ytsr": "^3.5.3"
   },
   "devDependencies": {
+    "@types/spotify-web-api-node": "^5.0.3",
     "eslint": "^7.32.0"
   }
 }
