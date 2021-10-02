@@ -9,9 +9,9 @@
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { CommandInteraction, GuildMember } from "discord.js";
-import { AudioPlayerStatus, createAudioPlayer, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
+import { AudioPlayerStatus, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../resources/Song";
-import { players } from "../resources/TempStorage";
+import { players, spotifyClient } from "../resources/TempStorage";
 import { MusicPlayer } from "../resources/MusicPlayer";
 
 const YoutubeSearch = require("../utilities/YoutubeSearch");
@@ -55,6 +55,7 @@ module.exports = {
 			players.set(interaction.guildId!, musicPlayer);
 		}
 
+		// Add the song to a music queue and return if something is playing. If not, play queue.
 		musicPlayer.addToQueue(song)
 		if (musicPlayer.audioPlayer.state.status === AudioPlayerStatus.Playing) {
 			interaction.editReply(`Added ${song.title} to queue in position ${musicPlayer.queueSize}`)
@@ -71,7 +72,6 @@ module.exports = {
 			if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
 				connection = await JoinUtility.joinChannel(interaction);
 			}
-			
 		} catch (error) {
 			throw error;
 		}
@@ -80,5 +80,13 @@ module.exports = {
 		connection?.subscribe(musicPlayer.audioPlayer)
 
 		interaction.editReply(`Now Playing: ${song.title}`)
+
+		// Spotify Recommendations
+		// Get the client and generate recommendations
+		const spotify = spotifyClient;
+		const recs = await spotifyClient.generateRecommendations(searchQuery!);
+
+		// For now just print recommendations in discord
+		interaction.followUp(`Recommendation 1: ${recs[0]['name']} by ${recs[0]['artists']}\nRecommendation 2: ${recs[1]['name']} by ${recs[1]['artists'][0]}\nRecommendation 3: ${recs[2]['name']} by ${recs[2]['artists'][0]}`)
 	}
 }
