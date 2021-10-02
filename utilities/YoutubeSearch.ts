@@ -2,9 +2,6 @@
  * A module that searches Youtube via the API and returns a list of results
  */
 import { google, youtube_v3 } from 'googleapis';
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 function loadYoutube(query: string) {
 	// Set the Youtube API settings

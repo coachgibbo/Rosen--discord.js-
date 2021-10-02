@@ -6,5 +6,7 @@
  */
 import { Snowflake } from "discord-api-types";
 import { MusicPlayer } from "./MusicPlayer";
+import { SpotifyClient } from "./SpotifyClient";
 
 export const players = new Map<Snowflake, MusicPlayer>();
+export const spotifyClient = new SpotifyClient();
