@@ -2,6 +2,7 @@
  * A module that searches Youtube via the API and returns a list of results
  */
 import { google, youtube_v3 } from 'googleapis';
+import ytsr, { Video } from 'ytsr';
 
 function loadYoutube(query: string) {
 	// Set the Youtube API settings
@@ -22,4 +23,11 @@ function loadYoutube(query: string) {
 	return youtube.search.list(params);
 }
 
-module.exports = { loadYoutube }
+async function getId(query: string) {
+	const searchResults = await ytsr(query, {
+		limit: 1,
+	});
+	return (searchResults.items[0] as Video).id
+}
+
+module.exports = { loadYoutube, getId }
