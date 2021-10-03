@@ -55,29 +55,31 @@ module.exports = {
 			players.set(interaction.guildId!, musicPlayer);
 		}
 
-		// Add the song to a music queue and return if something is playing. If not, play queue.
+		// Add the song to a music queue if something is playing. If not, play queue.
+		// Added into if-else so all calls get recommendations
 		musicPlayer.addToQueue(song)
 		if (musicPlayer.audioPlayer.state.status === AudioPlayerStatus.Playing) {
 			interaction.editReply(`Added ${song.title} to queue in position ${musicPlayer.queueSize}`)
-			return;
-		}
-		musicPlayer.play()
+		} else {
+			musicPlayer.play()
 		
-		// Check if voice connection exists and joins if not. Connect player to connection
-		let connection = getVoiceConnection(interaction.guildId!)
-		
-		// If not connected to a server or VoiceConnectionStatus has become disconnected from being idle,
-		// Run the JoinUtility to join the server. Wrapped in a try-catch in case something goes wrong.
-		try {
-			if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
-				connection = await JoinUtility.joinChannel(interaction);
+			// Check if voice connection exists and joins if not. Connect player to connection
+			let connection = getVoiceConnection(interaction.guildId!)
+			
+			// If not connected to a server or VoiceConnectionStatus has become disconnected from being idle,
+			// Run the JoinUtility to join the server. Wrapped in a try-catch in case something goes wrong.
+			try {
+				if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
+					connection = await JoinUtility.joinChannel(interaction);
+				}
+			} catch (error) {
+				throw error;
 			}
-		} catch (error) {
-			throw error;
+			
+			// Once connection is retrieved, subscribe the AudioPlayer.
+			connection?.subscribe(musicPlayer.audioPlayer)
 		}
-		
-		// Once connection is retrieved, subscribe the AudioPlayer.
-		connection?.subscribe(musicPlayer.audioPlayer)
+
 		// Spotify Recommendations
 		// Get the client and generate recommendations
 		const recs = await spotifyClient.generateRecommendations(searchQuery!);
