@@ -8,7 +8,7 @@
  * 		6. Plays the song
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { CommandInteraction, GuildMember } from "discord.js";
+import { ButtonInteraction, CommandInteraction, GuildMember, MessageActionRow, MessageButton } from "discord.js";
 import { AudioPlayerStatus, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../resources/Song";
 import { players, spotifyClient } from "../resources/TempStorage";
@@ -78,15 +78,84 @@ module.exports = {
 		
 		// Once connection is retrieved, subscribe the AudioPlayer.
 		connection?.subscribe(musicPlayer.audioPlayer)
-
-		interaction.editReply(`Now Playing: ${song.title}`)
-
 		// Spotify Recommendations
 		// Get the client and generate recommendations
-		const spotify = spotifyClient;
 		const recs = await spotifyClient.generateRecommendations(searchQuery!);
 
-		// For now just print recommendations in discord
-		interaction.followUp(`Recommendation 1: ${recs[0]['name']} by ${recs[0]['artists']}\nRecommendation 2: ${recs[1]['name']} by ${recs[1]['artists'][0]}\nRecommendation 3: ${recs[2]['name']} by ${recs[2]['artists'][0]}`)
+		// Create a button row with the three recommendations
+		const choose = new MessageActionRow()
+			.addComponents(
+				new MessageButton()
+					.setCustomId('opt1')
+					.setLabel(`${recs[0]['name']} - ${recs[0]['artists'][0]['name']}`)
+					.setStyle("PRIMARY"),
+				new MessageButton()
+					.setCustomId('opt2')
+					.setLabel(`${recs[1]['name']} - ${recs[1]['artists'][0]['name']}`)
+					.setStyle("PRIMARY"),
+				new MessageButton()
+					.setCustomId('opt3')
+					.setLabel(`${recs[2]['name']} - ${recs[2]['artists'][0]['name']}`)
+					.setStyle("PRIMARY"),
+			);
+
+		// Create Now Playing message and give song recs as buttons
+		interaction.editReply({
+			content: `Now Playing: ${song.title}`,
+			components: [choose]
+		})
+
+		// Create a collector that will watch for button presses
+		const buttonCollector = interaction.channel?.createMessageComponentCollector({
+			max: 3,
+			time: 1000 * 15
+		});
+
+		// Indicate what is to be done when a buttonInteraction is collected
+		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
+			if (bInteraction.customId === 'opt1'){
+				YoutubeSearch.getId(recs[0]['name']).then((id: string) => {
+					console.log(id)
+					musicPlayer?.addToQueue(new Song({
+						id: id,
+						title: recs[0]['name'],
+						onStart: () => { },
+						onFinish: () => { },
+						onError: () => { }
+					}));
+					bInteraction.reply(`Queued ${recs[0]['name']} in position ${musicPlayer?.queueSize}`)
+				});
+			} else if (bInteraction.customId === 'opt2') {
+				YoutubeSearch.getId(recs[1]['name']).then((id: string) => {
+					musicPlayer?.addToQueue(new Song({
+						id: id,
+						title: recs[1]['name'],
+						onStart: () => { },
+						onFinish: () => { },
+						onError: () => { }
+					}));
+					bInteraction.reply(`Queued ${recs[1]['name']} in position ${musicPlayer?.queueSize}`)
+				});
+			} else if (bInteraction.customId === 'opt3') {
+				YoutubeSearch.getId(recs[2]['name']).then((id: string) => {
+					musicPlayer?.addToQueue(new Song({
+						id: id,
+						title: recs[2]['name'],
+						onStart: () => { },
+						onFinish: () => { },
+						onError: () => { }
+					}));
+					bInteraction.reply(`Queued ${recs[2]['name']} in position ${musicPlayer?.queueSize}`)
+				});
+			}
+		});
+
+		// Indicate what is to be done when the button 'expires'
+		buttonCollector?.on('end', () => {
+			interaction.editReply({
+				content: `Now Playing: ${song.title}`,
+				components: []
+			})
+		});
 	}
 }
