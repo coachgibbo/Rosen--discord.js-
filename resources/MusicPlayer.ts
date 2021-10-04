@@ -24,7 +24,7 @@ export class MusicPlayer {
 		if (this.queueSize === 0) {
 			console.log("The queue is empty");
 			return;
-		} else if (this.audioPlayer.state.status !== AudioPlayerStatus.Idle) {
+		} else if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
 			console.log("Something's already playing")
 			return;
 		}

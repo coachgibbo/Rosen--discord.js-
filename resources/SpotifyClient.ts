@@ -33,7 +33,7 @@ export class SpotifyClient {
 		.then(async (data) => {
 			// If seed is found, use it to generate 3 recommendations from Spotify that are returned
 			return this.client.getRecommendations({
-				min_popularity: 50,
+				min_popularity: 60,
 				seed_tracks: [data.body['tracks']?.items[0].id!],
 				limit: 3
 			}).then((data) => {

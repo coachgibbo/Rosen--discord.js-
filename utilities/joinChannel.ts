@@ -1,7 +1,7 @@
 import { DiscordGatewayAdapterCreator, entersState, joinVoiceChannel, VoiceConnectionStatus } from "@discordjs/voice";
 import { CommandInteraction, GuildMember } from "discord.js";
 
-async function joinChannel(interaction: CommandInteraction) {
+export async function joinChannel(interaction: CommandInteraction) {
 	// Create the VoiceConnection and set channel parameters from caller
 	const connection = joinVoiceChannel({
 		channelId: (interaction.member as GuildMember).voice.channel?.id!,
@@ -20,5 +20,3 @@ async function joinChannel(interaction: CommandInteraction) {
 		throw error;
 	}
 }
-
-module.exports = { joinChannel }

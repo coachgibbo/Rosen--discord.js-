@@ -4,7 +4,7 @@
 import { google, youtube_v3 } from 'googleapis';
 import ytsr, { Video } from 'ytsr';
 
-function loadYoutube(query: string) {
+export function loadYoutube(query: string) {
 	// Set the Youtube API settings
 	const youtube = google.youtube({
 		version: 'v3',
@@ -23,7 +23,7 @@ function loadYoutube(query: string) {
 	return youtube.search.list(params);
 }
 
-async function getId(query: string) {
+export async function getId(query: string) {
 	const searchResults = await ytsr(query, {
 		limit: 1,
 	});

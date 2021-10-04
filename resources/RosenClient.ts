@@ -15,4 +15,16 @@ export class RosenClient extends Client {
 
 		this.commands = new Collection();
 	}
+
+	public getPlayer(guildId: string) {
+		return this.players.get(guildId);
+	}
+
+	public setPlayer(guildId: string, player: MusicPlayer) {
+		this.players.set(guildId, player);
+	}
+
+	public async generateRecommendations(query: string) {
+		return this.spotifyClient.generateRecommendations(query);
+	}
 }

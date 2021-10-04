@@ -3,8 +3,7 @@
  */
 import { CommandInteraction, GuildMember } from "discord.js";
 import { SlashCommandBuilder } from '@discordjs/builders';
-
-const JoinUtility = require("../utilities/joinChannel");
+import { joinChannel } from "../utilities/joinChannel";
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
@@ -21,6 +20,6 @@ module.exports = {
 			await interaction.reply(`Joining ${userChannel!.name}  :orange_circle:`);
 		}
 
-		JoinUtility.joinChannel(interaction);
+		joinChannel(interaction);
 	}
 }

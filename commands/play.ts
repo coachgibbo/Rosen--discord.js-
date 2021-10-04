@@ -11,11 +11,10 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { ButtonInteraction, CommandInteraction, GuildMember, MessageActionRow, MessageButton } from "discord.js";
 import { AudioPlayerStatus, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../resources/Song";
-import { players, spotifyClient } from "../resources/TempStorage";
 import { MusicPlayer } from "../resources/MusicPlayer";
-
-const YoutubeSearch = require("../utilities/YoutubeSearch");
-const JoinUtility = require("../utilities/joinChannel");
+import { RosenClient } from "../resources/RosenClient";
+import { loadYoutube, getId } from "../utilities/YoutubeSearch";
+import { joinChannel } from "../utilities/joinChannel";
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
@@ -29,30 +28,33 @@ module.exports = {
 			return;
 		}
 
+		// Create a variable to easily access the Client and indicate that it's of type RosenClient
+		const client = interaction.client as RosenClient
+
 		// Extract search query and update caller on command status
 		const searchQuery = interaction.options.getString('song');
 		await interaction.reply(`Searching for ${searchQuery} :orange_circle:`)
 
 		// Use Youtube API to grab search results. Indicate success to caller.
 		// await works for now. consider switching to promises if doing spotify stuff too
-		const searchResults = await YoutubeSearch.loadYoutube(searchQuery).catch(console.error);
-		const videoId = searchResults.data.items[0].id.videoId
+		const video =  (await loadYoutube(searchQuery!)).data.items![0]
+		const videoId = video.id?.videoId
 		await interaction.editReply(`Song retrieved with id: ${videoId} :green_circle:`);
 
 		// Create a Song object with information necessary for playing the track
 		const song = new Song({
-			id: videoId,
-			title: searchResults.data.items[0].snippet.title,
+			id: videoId!,
+			title: video.snippet!.title!,
 			onStart: () => { },
 			onFinish: () => { },
 			onError: () => { }
 		});
 
 		// Retrieves this servers player from the players Map. Create and store one if none exists
-		let musicPlayer = players.get(interaction.guildId!);
+		let musicPlayer = client.getPlayer(interaction.guildId!);
 		if (!musicPlayer) { 
 			musicPlayer = new MusicPlayer();
-			players.set(interaction.guildId!, musicPlayer);
+			client.setPlayer(interaction.guildId!, musicPlayer);
 		}
 
 		// Add the song to a music queue if something is playing. If not, play queue.
@@ -70,7 +72,7 @@ module.exports = {
 			// Run the JoinUtility to join the server. Wrapped in a try-catch in case something goes wrong.
 			try {
 				if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
-					connection = await JoinUtility.joinChannel(interaction);
+					connection = await joinChannel(interaction);
 				}
 			} catch (error) {
 				throw error;
@@ -82,22 +84,22 @@ module.exports = {
 
 		// Spotify Recommendations
 		// Get the client and generate recommendations
-		const recs = await spotifyClient.generateRecommendations(searchQuery!);
+		const recs = await client.generateRecommendations(searchQuery!);
 
 		// Create a button row with the three recommendations
 		const choose = new MessageActionRow()
 			.addComponents(
 				new MessageButton()
 					.setCustomId('opt1')
-					.setLabel(`${recs[0]['name']} - ${recs[0]['artists'][0]['name']}`)
+					.setLabel(`${recs[0]['name']} - ${recs[0]['artists'][0]['name']}`.substring(0, 80))
 					.setStyle("PRIMARY"),
 				new MessageButton()
 					.setCustomId('opt2')
-					.setLabel(`${recs[1]['name']} - ${recs[1]['artists'][0]['name']}`)
+					.setLabel(`${recs[1]['name']} - ${recs[1]['artists'][0]['name']}`.substring(0, 80))
 					.setStyle("PRIMARY"),
 				new MessageButton()
 					.setCustomId('opt3')
-					.setLabel(`${recs[2]['name']} - ${recs[2]['artists'][0]['name']}`)
+					.setLabel(`${recs[2]['name']} - ${recs[2]['artists'][0]['name']}`.substring(0, 80))
 					.setStyle("PRIMARY"),
 			);
 
@@ -116,7 +118,7 @@ module.exports = {
 		// Indicate what is to be done when a buttonInteraction is collected
 		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
 			if (bInteraction.customId === 'opt1'){
-				YoutubeSearch.getId(recs[0]['name']).then((id: string) => {
+				getId(recs[0]['name']).then((id: string) => {
 					console.log(id)
 					musicPlayer?.addToQueue(new Song({
 						id: id,
@@ -128,7 +130,7 @@ module.exports = {
 					bInteraction.reply(`Queued ${recs[0]['name']} in position ${musicPlayer?.queueSize}`)
 				});
 			} else if (bInteraction.customId === 'opt2') {
-				YoutubeSearch.getId(recs[1]['name']).then((id: string) => {
+				getId(recs[1]['name']).then((id: string) => {
 					musicPlayer?.addToQueue(new Song({
 						id: id,
 						title: recs[1]['name'],
@@ -139,7 +141,7 @@ module.exports = {
 					bInteraction.reply(`Queued ${recs[1]['name']} in position ${musicPlayer?.queueSize}`)
 				});
 			} else if (bInteraction.customId === 'opt3') {
-				YoutubeSearch.getId(recs[2]['name']).then((id: string) => {
+				getId(recs[2]['name']).then((id: string) => {
 					musicPlayer?.addToQueue(new Song({
 						id: id,
 						title: recs[2]['name'],
