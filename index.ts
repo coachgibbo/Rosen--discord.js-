@@ -3,8 +3,9 @@
  * initializes command and event handling.
  */
 import fs from 'fs';
-import {Client, Collection, Intents } from 'discord.js';
+import { Intents } from 'discord.js';
 import dotenv from 'dotenv';
+import { RosenClient } from './resources/RosenClient';
 
 // Set AbortController as we're using Node v14 due to ytdl problems with v16
 global.AbortController = require("node-abort-controller").AbortController;
@@ -13,16 +14,15 @@ global.AbortController = require("node-abort-controller").AbortController;
 dotenv.config();
 
 // Create a discord client instance
-const client = new Client({
+const client = new RosenClient({
 	intents: [
 		Intents.FLAGS.GUILDS,
 		Intents.FLAGS.GUILD_MESSAGES,
 		Intents.FLAGS.GUILD_VOICE_STATES,
 	],
-}) as any;
+});
 
 // Creates a Discord Collection to store commands and reads command files from the ./commands folder
-client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.ts'));
 
 // Iterates through command files and stores a (name, file) mapping in client.commands
