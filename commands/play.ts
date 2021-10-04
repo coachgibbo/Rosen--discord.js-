@@ -119,7 +119,6 @@ module.exports = {
 		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
 			if (bInteraction.customId === 'opt1'){
 				getId(recs[0]['name']).then((id: string) => {
-					console.log(id)
 					musicPlayer?.addToQueue(new Song({
 						id: id,
 						title: recs[0]['name'],

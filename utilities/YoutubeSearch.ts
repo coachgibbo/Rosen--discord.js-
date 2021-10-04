@@ -27,6 +27,7 @@ export async function getId(query: string) {
 	const searchResults = await ytsr(query, {
 		limit: 1,
 	});
+	console.log((searchResults.items[0] as Video).title)
 	return (searchResults.items[0] as Video).id
 }
 
