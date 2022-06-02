@@ -9,7 +9,7 @@ module.exports = {
         .setDescription('Retrieves the queue'),
     async execute(interaction: CommandInteraction): Promise<void> {
         const musicPlayer = (<RosenClient>interaction.client).getPlayer(interaction.guildId!);
-        if (musicPlayer) {
+        if (!(musicPlayer)) {
             await interaction.reply(`Queue is empty`);
             return;
         }
