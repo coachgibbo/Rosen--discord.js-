@@ -5,10 +5,7 @@
 import fs from 'fs';
 import { Intents } from 'discord.js';
 import dotenv from 'dotenv';
-import { RosenClient } from './resources/RosenClient';
-
-// Set AbortController as we're using Node v14 due to ytdl problems with v16
-global.AbortController = require("node-abort-controller").AbortController;
+import { RosenClient } from './model/RosenClient';
 
 // Get environment variables from .env config
 dotenv.config();
@@ -28,7 +25,7 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 // Iterates through command files and stores a (name, file) mapping in client.commands
 for (const file of commandFiles) {
 	const command = require(`./commands/${file}`);
-	client.commands.set(command.data.name, command);
+	client.setCommand(command.data.name, command);
 }
 
 // Reads the event files from the events directory and filters out non-ts files

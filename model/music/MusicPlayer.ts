@@ -2,17 +2,18 @@ import { AudioPlayer, AudioPlayerStatus, createAudioPlayer } from "@discordjs/vo
 import { Song } from "./Song"
 
 export class MusicPlayer {
-	public readonly audioPlayer: AudioPlayer;
-	public queue: Song[];
-	public queueSize: number;
+	private audioPlayer: AudioPlayer;
+	private queue: Song[];
+	private currentSong: Song | null;
 
 	public constructor() {
 		this.audioPlayer = createAudioPlayer();
 		this.queue = [];
-		this.queueSize = 0;
+		this.currentSong = null;
 
+		// @ts-ignore
 		this.audioPlayer.on('stateChange', (oldState, newState) => {
-			if (newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle) {
+			if (newState.status === AudioPlayerStatus.Idle) {
 				this.play();
 			} else if (newState.status === AudioPlayerStatus.Playing) {
 				console.log("A new track has started playing")
@@ -20,8 +21,8 @@ export class MusicPlayer {
 		})
 	}
 
-	public play() {
-		if (this.queueSize === 0) {
+	public async play() {
+		if (this.queue.length === 0) {
 			console.log("The queue is empty");
 			return;
 		} else if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
@@ -29,21 +30,33 @@ export class MusicPlayer {
 			return;
 		}
 
-		const nextStream = this.queue.shift()?.createAudioResource();
-		this.queueSize -= 1;
+		const nextSong = this.queue.shift();
+		const nextStream = await nextSong?.createAudioResource();
 		this.audioPlayer.play(nextStream!);
+		this.currentSong = nextSong!;
 	}
 
 	public addToQueue(song: Song) {
 		this.queue.push(song);
-		this.queueSize += 1;
 	}
 
-	public skip() {
+	public getQueueSize(): number {
+		return this.queue.length;
+	}
+
+	public skip(): void {
 		this.audioPlayer.stop(true)
 	}
 
-	public isPlaying() {
+	public isPlaying(): boolean {
 		return (this.audioPlayer.state.status === AudioPlayerStatus.Playing);
+	}
+
+	public getNextSong(): Song | undefined {
+		return this.queue.at(0);
+	}
+
+	public getAudioPlayer(): AudioPlayer {
+		return this.audioPlayer;
 	}
 }

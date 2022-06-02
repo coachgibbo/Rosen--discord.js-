@@ -9,50 +9,59 @@
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { ButtonInteraction, CommandInteraction, GuildMember, MessageActionRow, MessageButton } from "discord.js";
-import { AudioPlayerStatus, getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
-import { Song } from "../resources/Song";
-import { MusicPlayer } from "../resources/MusicPlayer";
-import { RosenClient } from "../resources/RosenClient";
-import { loadYoutube, getId } from "../utilities/YoutubeSearch";
-import { joinChannel } from "../utilities/joinChannel";
+import { getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
+import { Song } from "../model/music/Song";
+import { MusicPlayer } from "../model/music/MusicPlayer";
+import { RosenClient } from "../model/RosenClient";
+import { joinUtils } from "../utils/JoinUtils";
+import {YouTubeVideo} from "play-dl";
+import {EmbedUtils} from "../utils/EmbedUtils";
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
 		.setName('play') // Command Name
 		.setDescription('Plays a song off YouTube') // Command Desc (Shown in disc)
 		.addStringOption(option => option.setName('song').setDescription("The song to search for").setRequired(true)),
-	async execute(interaction: CommandInteraction) {
-		// Gate Clause if caller is not in a voice channel
-		if (!((interaction.member as GuildMember).voice.channel)) {
-			await interaction.reply("Join a voice channel first");
+	execute: async function (interaction: CommandInteraction): Promise<void> {
+		const client = <RosenClient>interaction.client;
+		const user = <GuildMember>interaction.member;
+		const youtubeClient = client.getYoutubeClient();
+		const responseEmbed = EmbedUtils.buildEmbed();
+
+		// Gate clause if caller is not in a voice channel
+		if (!(user.voice.channel)) {
+			responseEmbed.setDescription(`Join a voice channel first`).setColor(`#ff0000`);
+			await interaction.reply({ embeds: [responseEmbed.build()] });
 			return;
 		}
 
-		// Create a variable to easily access the Client and indicate that it's of type RosenClient
-		const client = interaction.client as RosenClient
-
 		// Extract search query and update caller on command status
 		const searchQuery = interaction.options.getString('song');
-		await interaction.reply(`Searching for ${searchQuery} :orange_circle:`)
+		responseEmbed.setTitle(`Playing ${searchQuery}`)
+			.setDescription(`Searching for ${searchQuery}`)
+			.setColor(`#eb7e18`)
+		await interaction.reply({ embeds: [responseEmbed.build()] })
 
-		// Use Youtube API to grab search results. Indicate success to caller.
-		// await works for now. consider switching to promises if doing spotify stuff too
-		const video =  (await loadYoutube(searchQuery!)).data.items![0]
-		const videoId = video.id?.videoId
-		await interaction.editReply(`Song retrieved with id: ${videoId} :green_circle:`);
+		// Call YouTube client to get search results
+		const video = await youtubeClient.getVideo(searchQuery!)
+		const videoId = video.id
+		const videoTitle = video.title
+
+		responseEmbed.setDescription(`Song retrieved with id: ${videoId}`).setColor(`#12a32a`);
+		await interaction.editReply({ embeds: [responseEmbed.build()] });
 
 		// Create a Song object with information necessary for playing the track
 		const song = new Song({
 			id: videoId!,
-			title: video.snippet!.title!,
-			onStart: () => { },
-			onFinish: () => { },
-			onError: () => { }
+			title: videoTitle!,
+			onStart: () => {},
+			onFinish: () => {},
+			onError: () => {}
 		});
 
 		// Retrieves this servers player from the players Map. Create and store one if none exists
 		let musicPlayer = client.getPlayer(interaction.guildId!);
-		if (!musicPlayer) { 
+		if (!musicPlayer) {
 			musicPlayer = new MusicPlayer();
 			client.setPlayer(interaction.guildId!, musicPlayer);
 		}
@@ -60,31 +69,34 @@ module.exports = {
 		// Add the song to a music queue if something is playing. If not, play queue.
 		// Added into if-else so all calls get recommendations
 		musicPlayer.addToQueue(song)
-		if (musicPlayer.audioPlayer.state.status === AudioPlayerStatus.Playing) {
-			interaction.editReply(`Added ${song.title} to queue in position ${musicPlayer.queueSize}`)
+		if (musicPlayer.isPlaying()) {
+			responseEmbed.setTitle(`Yessir`)
+				.setDescription(`Added ${song.title} to queue in position ${musicPlayer.getQueueSize()}`)
+				.setColor(`#1cafc5`);
+			await interaction.editReply({ embeds: [responseEmbed.build()] });
+			return;
 		} else {
-			musicPlayer.play()
-		
 			// Check if voice connection exists and joins if not. Connect player to connection
-			let connection = getVoiceConnection(interaction.guildId!)
-			
-			// If not connected to a server or VoiceConnectionStatus has become disconnected from being idle,
-			// Run the JoinUtility to join the server. Wrapped in a try-catch in case something goes wrong.
+			let connection = getVoiceConnection(interaction.guildId!);
+
+			// If not connected to a server then join the users
 			try {
 				if (!connection || connection?.state.status === VoiceConnectionStatus.Disconnected) {
-					connection = await joinChannel(interaction);
+					connection = await joinUtils(interaction);
 				}
 			} catch (error) {
-				throw error;
+				console.log(`Error when joining server\n${error}`);
 			}
-			
-			// Once connection is retrieved, subscribe the AudioPlayer.
-			connection?.subscribe(musicPlayer.audioPlayer)
+
+			connection?.subscribe(musicPlayer.getAudioPlayer());
+			await musicPlayer.play();
 		}
 
 		// Spotify Recommendations
 		// Get the client and generate recommendations
-		const recs = await client.generateRecommendations(searchQuery!);
+		const spotifyClient = client.getSpotifyClient();
+		const recs = await spotifyClient.generateRecommendations(searchQuery!);
+		console.log(recs[2]);
 
 		// Create a button row with the three recommendations
 		const choose = new MessageActionRow()
@@ -104,8 +116,12 @@ module.exports = {
 			);
 
 		// Create Now Playing message and give song recs as buttons
-		interaction.editReply({
-			content: `Now Playing: ${song.title}`,
+		responseEmbed.setTitle(`Yessir`)
+			.setDescription(`Now Playing: ${song.title}`)
+			.setColor(`#1cafc5`);
+
+		await interaction.editReply({
+			embeds: [responseEmbed.build()],
 			components: [choose]
 		})
 
@@ -117,38 +133,45 @@ module.exports = {
 
 		// Indicate what is to be done when a buttonInteraction is collected
 		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
-			if (bInteraction.customId === 'opt1'){
-				getId(recs[0]['name']).then((id: string) => {
+			const buttonEmbed = EmbedUtils.buildEmbed()
+				.setTitle(`Added to Queue`)
+				.setColor(`#1cafc5`);
+
+			if (bInteraction.customId === 'opt1') {
+				youtubeClient.getVideo(recs[0]['name']).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
-						id: id,
+						id: video.id!,
 						title: recs[0]['name'],
-						onStart: () => { },
-						onFinish: () => { },
-						onError: () => { }
+						onStart: () => {},
+						onFinish: () => {},
+						onError: () => {}
 					}));
-					bInteraction.reply(`Queued ${recs[0]['name']} in position ${musicPlayer?.queueSize}`)
+					buttonEmbed.setDescription(`Queued ${recs[0]['name']} in position ${musicPlayer?.getQueueSize()}`);
+					bInteraction.reply({ embeds: [buttonEmbed.build()] })
 				});
 			} else if (bInteraction.customId === 'opt2') {
-				getId(recs[1]['name']).then((id: string) => {
+				youtubeClient.getVideo(recs[1]['name']).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
-						id: id,
+						id: video.id!,
 						title: recs[1]['name'],
-						onStart: () => { },
-						onFinish: () => { },
-						onError: () => { }
+						onStart: () => {},
+						onFinish: () => {},
+						onError: () => {}
 					}));
-					bInteraction.reply(`Queued ${recs[1]['name']} in position ${musicPlayer?.queueSize}`)
+					buttonEmbed.setDescription(`Queued ${recs[1]['name']} in position ${musicPlayer?.getQueueSize()}`);
+					bInteraction.reply({ embeds: [buttonEmbed.build()] })
 				});
 			} else if (bInteraction.customId === 'opt3') {
-				getId(recs[2]['name']).then((id: string) => {
+				youtubeClient.getVideo(recs[2]['name']).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
-						id: id,
+						id: video.id!,
 						title: recs[2]['name'],
-						onStart: () => { },
-						onFinish: () => { },
-						onError: () => { }
+						onStart: () => {},
+						onFinish: () => {},
+						onError: () => {}
 					}));
-					bInteraction.reply(`Queued ${recs[2]['name']} in position ${musicPlayer?.queueSize}`)
+					buttonEmbed.setDescription(`Queued ${recs[2]['name']} in position ${musicPlayer?.getQueueSize()}`);
+					bInteraction.reply({ embeds: [buttonEmbed.build()] })
 				});
 			}
 		});
@@ -156,7 +179,7 @@ module.exports = {
 		// Indicate what is to be done when the button 'expires'
 		buttonCollector?.on('end', () => {
 			interaction.editReply({
-				content: `Now Playing: ${song.title}`,
+				embeds: [responseEmbed.build()],
 				components: []
 			})
 		});

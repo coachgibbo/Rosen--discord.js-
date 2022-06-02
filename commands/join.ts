@@ -3,23 +3,34 @@
  */
 import { CommandInteraction, GuildMember } from "discord.js";
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { joinChannel } from "../utilities/joinChannel";
+import { joinUtils } from "../utils/JoinUtils";
+import { EmbedUtils } from "../utils/EmbedUtils";
 
 module.exports = {
-	data: new SlashCommandBuilder() // Discord Command Builder
-		.setName('join') // Command Name
-		.setDescription('Joins the user\'s voice channel'), // Command Desc (Shown in disc)
-	async execute(interaction: CommandInteraction) {
-		var userChannel = (interaction.member as GuildMember).voice.channel; // Get caller's voice channel
+	data: new SlashCommandBuilder()
+		.setName('join')
+		.setDescription('Joins the user\'s voice channel'),
+	async execute(interaction: CommandInteraction): Promise<void> {
+		const voiceChannel = (interaction.member as GuildMember).voice.channel;
 
 		// Handler for when caller is not in a voice channel
-		if (!userChannel) {
-			await interaction.reply(`You're not in a voice channel`);
+		if (!voiceChannel) {
+			const embed = EmbedUtils.buildEmbed()
+				.setDescription(`You're not in a voice channel`)
+				.setColor(`#ff0000`);
+			await interaction.reply({ embeds: [embed.build()] });
 			return;
 		} else {
-			await interaction.reply(`Joining ${userChannel!.name}  :orange_circle:`);
+			const embed = EmbedUtils.buildEmbed()
+				.setTitle(`Joining ${voiceChannel!.name}`)
+				.setColor(`#12a32a`);
+			await interaction.reply({ embeds: [embed.build()] });
 		}
 
-		joinChannel(interaction);
+		await joinUtils(interaction);
+		const embed = EmbedUtils.buildEmbed()
+			.setTitle(`Joined ${(interaction.member as GuildMember).voice.channel!.name}`)
+			.setColor(`#12a32a`);
+		await interaction.followUp({ embeds: [embed.build()] });
 	}
 }

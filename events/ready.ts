@@ -1,4 +1,4 @@
-import { RosenClient } from "../resources/RosenClient";
+import { RosenClient } from "../model/RosenClient";
 
 module.exports = {
 	name: 'ready',

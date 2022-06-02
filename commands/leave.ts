@@ -1,27 +1,33 @@
 /**
  * A command that tells the bot to leave the server it's currently in
  */
-
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { getVoiceConnection, VoiceConnection } from "@discordjs/voice";
+import { getVoiceConnection } from "@discordjs/voice";
 import { CommandInteraction } from "discord.js";
+import {EmbedUtils} from "../utils/EmbedUtils";
 
 module.exports = {
-	data: new SlashCommandBuilder() // Discord Command Builder
-		.setName('leave') // Command Name
-		.setDescription('Leave\'s the voice channel'), // Command Desc (Shown in Discord)
-	async execute(interaction: CommandInteraction) {
+	data: new SlashCommandBuilder()
+		.setName('leave')
+		.setDescription('Leave\'s the voice channel'),
+	async execute(interaction: CommandInteraction): Promise<void> {
 		// Use guildId to obtain VoiceConnection (1 Voice per Guild)
-		const connection = getVoiceConnection(interaction.guildId as string) as VoiceConnection;
+		const connection = getVoiceConnection(<string>interaction.guildId);
 
 		// If not in server, reply and exit
-		// Else, destroy the connection to save resources and reply
+		// Else, destroy the connection and reply
 		if (!connection) {
-			await interaction.reply('I\'m not in a voice channel cobba');
+			const embed = EmbedUtils.buildEmbed()
+				.setDescription(`I'm not in a voice channel`)
+				.setColor(`#ff0000`);
+			await interaction.reply({ embeds: [embed.build()] });
 			return;
 		} else {
 			connection.destroy();
-			await interaction.reply(`Disconnected by ${interaction.user.username}`);
+			const embed = EmbedUtils.buildEmbed()
+				.setDescription(`Disconnected by ${interaction.user.username}`)
+				.setColor(`#eb7e18`);
+			await interaction.reply({ embeds: [embed.build()] });
 		}
 	}
 }
