@@ -25,7 +25,7 @@ export class SpotifyClient {
 	 */
 	public async generateRecommendations(query: string) {
 		let recommendations: any = []
-		
+
 		// Use the search query to find the spotify seed for the searched song
 		recommendations = this.client.searchTracks(query, {
 			limit: 1
@@ -35,7 +35,7 @@ export class SpotifyClient {
 			return this.client.getRecommendations({
 				min_popularity: 60,
 				seed_tracks: [data.body['tracks']?.items[0].id!],
-				limit: 3
+				limit: 5
 			}).then((data) => {
 				return data.body['tracks'];
 			})

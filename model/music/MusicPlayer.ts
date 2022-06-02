@@ -44,6 +44,10 @@ export class MusicPlayer {
 		return this.queue.length;
 	}
 
+	public getQueue(): Song[] {
+		return this.queue;
+	}
+
 	public skip(): void {
 		this.audioPlayer.stop(true)
 	}
