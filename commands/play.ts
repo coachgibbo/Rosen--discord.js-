@@ -138,7 +138,7 @@ module.exports = {
 				.setColor(`#1cafc5`);
 
 			if (bInteraction.customId === 'opt1') {
-				youtubeClient.getVideo(recs[0]['name']).then((video: YouTubeVideo) => {
+				youtubeClient.getVideo(`${recs[0]['name']} ${recs[0]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
 						id: video.id!,
 						title: recs[0]['name'],
@@ -150,7 +150,7 @@ module.exports = {
 					bInteraction.reply({ embeds: [buttonEmbed.build()] })
 				});
 			} else if (bInteraction.customId === 'opt2') {
-				youtubeClient.getVideo(recs[1]['name']).then((video: YouTubeVideo) => {
+				youtubeClient.getVideo(`${recs[1]['name']} ${recs[1]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
 						id: video.id!,
 						title: recs[1]['name'],
@@ -162,7 +162,7 @@ module.exports = {
 					bInteraction.reply({ embeds: [buttonEmbed.build()] })
 				});
 			} else if (bInteraction.customId === 'opt3') {
-				youtubeClient.getVideo(recs[2]['name']).then((video: YouTubeVideo) => {
+				youtubeClient.getVideo(`${recs[2]['name']} ${recs[2]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
 					musicPlayer?.addToQueue(new Song({
 						id: video.id!,
 						title: recs[2]['name'],
