@@ -10,7 +10,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('join')
 		.setDescription('Joins the user\'s voice channel'),
-	async execute(interaction: CommandInteraction): Promise<void> {
+	execute: async function (interaction: CommandInteraction): Promise<void> {
 		const voiceChannel = (interaction.member as GuildMember).voice.channel;
 
 		// Handler for when caller is not in a voice channel

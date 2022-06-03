@@ -8,7 +8,13 @@
  * 		6. Plays the song
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { ButtonInteraction, CommandInteraction, GuildMember, MessageActionRow, MessageButton } from "discord.js";
+import {
+	ButtonInteraction,
+	CommandInteraction,
+	GuildMember, InteractionCollector,
+	MessageActionRow,
+	MessageButton, MessageComponentInteraction,
+} from "discord.js";
 import { getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Song } from "../model/music/Song";
 import { MusicPlayer } from "../model/music/MusicPlayer";
@@ -74,7 +80,6 @@ module.exports = {
 				.setDescription(`Added ${song.title} to queue in position ${musicPlayer.getQueueSize()}`)
 				.setColor(`#1cafc5`);
 			await interaction.editReply({ embeds: [responseEmbed.build()] });
-			return;
 		} else {
 			// Check if voice connection exists and joins if not. Connect player to connection
 			let connection = getVoiceConnection(interaction.guildId!);
@@ -90,13 +95,46 @@ module.exports = {
 
 			connection?.subscribe(musicPlayer.getAudioPlayer());
 			await musicPlayer.play();
+
+			// Create Now Playing message and give song recs as buttons
+			responseEmbed.setTitle(`Yessir`)
+				.setDescription(`Now Playing: ${song.title}`)
+				.setColor(`#1cafc5`);
 		}
 
+		// Generate spotify recommendations and return discord buttons
+		const recResponse = await this.generateRecommendations(
+			client,
+			interaction,
+			searchQuery!,
+			musicPlayer
+		);
+		const recButtons = recResponse[0];
+		const buttonCollector = recResponse[1];
+
+		// Indicate what is to be done when the button 'expires'
+		buttonCollector?.on('end', () => {
+			interaction.editReply({
+				embeds: [responseEmbed.build()],
+				components: []
+			})
+		});
+
+		await interaction.editReply({
+			embeds: [responseEmbed.build()],
+			components: [recButtons]
+		})
+	},
+	generateRecommendations: async function (
+		client: RosenClient,
+		interaction: CommandInteraction,
+		searchQuery: string,
+		musicPlayer: MusicPlayer
+	): Promise<[MessageActionRow, InteractionCollector<MessageComponentInteraction>]> {
 		// Spotify Recommendations
 		// Get the client and generate recommendations
 		const spotifyClient = client.getSpotifyClient();
 		const recs = await spotifyClient.generateRecommendations(searchQuery!);
-		console.log(recs[2]);
 
 		// Create a button row with the three recommendations
 		const choose = new MessageActionRow()
@@ -115,21 +153,13 @@ module.exports = {
 					.setStyle("PRIMARY"),
 			);
 
-		// Create Now Playing message and give song recs as buttons
-		responseEmbed.setTitle(`Yessir`)
-			.setDescription(`Now Playing: ${song.title}`)
-			.setColor(`#1cafc5`);
-
-		await interaction.editReply({
-			embeds: [responseEmbed.build()],
-			components: [choose]
-		})
-
 		// Create a collector that will watch for button presses
 		const buttonCollector = interaction.channel?.createMessageComponentCollector({
 			max: 3,
 			time: 1000 * 15
 		});
+
+		const youtubeClient = client.getYoutubeClient();
 
 		// Indicate what is to be done when a buttonInteraction is collected
 		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
@@ -139,7 +169,7 @@ module.exports = {
 
 			if (bInteraction.customId === 'opt1') {
 				youtubeClient.getVideo(`${recs[0]['name']} ${recs[0]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
-					musicPlayer?.addToQueue(new Song({
+					musicPlayer!.addToQueue(new Song({
 						id: video.id!,
 						title: recs[0]['name'],
 						onStart: () => {},
@@ -176,12 +206,6 @@ module.exports = {
 			}
 		});
 
-		// Indicate what is to be done when the button 'expires'
-		buttonCollector?.on('end', () => {
-			interaction.editReply({
-				embeds: [responseEmbed.build()],
-				components: []
-			})
-		});
+		return [choose, buttonCollector!];
 	}
 }
