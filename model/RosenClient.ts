@@ -2,10 +2,12 @@ import { Client, ClientOptions, Collection, Snowflake } from "discord.js";
 import { MusicPlayer } from "./music/MusicPlayer";
 import { SpotifyClient } from "./apis/SpotifyClient";
 import {YoutubeClient} from "./apis/YoutubeClient";
+import {VoiceConnection} from "@discordjs/voice";
 
 export class RosenClient extends Client {
 	private commands: Collection<any, any>;
 	private players: Map<Snowflake, MusicPlayer>;
+	private connections: Map<Snowflake, VoiceConnection>;
 
 	private youtubeClient: YoutubeClient;
 	private spotifyClient: SpotifyClient;
@@ -15,6 +17,7 @@ export class RosenClient extends Client {
 
 		this.commands = new Collection();
 		this.players = new Map<Snowflake, MusicPlayer>();
+		this.connections = new Map<Snowflake, VoiceConnection>();
 		this.youtubeClient = new YoutubeClient();
 		this.spotifyClient = new SpotifyClient();
 	}

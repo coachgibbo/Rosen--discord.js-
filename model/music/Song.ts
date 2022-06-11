@@ -13,6 +13,9 @@ import play from "play-dl";
 export interface SongData {
 	id: string;
 	title: string;
+	duration: number;
+	thumbnail: string;
+	requestor: string;
 	onStart: () => void;
 	onFinish: () => void;
 	onError: (error: Error) => void;
@@ -22,14 +25,20 @@ export class Song implements SongData{
 	public readonly id: string;
 	public readonly url: string;
 	public readonly title: string;
+	public readonly duration: number;
+	public readonly thumbnail: string;
+	public readonly requestor: string;
 	public readonly onStart: () => void;
 	public readonly onFinish: () => void;
 	public readonly onError: (error: Error) => void;
 
-	constructor({ id, title, onStart, onFinish, onError }: SongData) {
+	constructor({ id, duration, thumbnail, requestor, title, onStart, onFinish, onError }: SongData) {
 		this.id = id;
 		this.url = "https://www.youtube.com/watch?v=" + id;
 		this.title = title;
+		this.duration = duration;
+		this.thumbnail = thumbnail;
+		this.requestor = requestor;
 		this.onStart = onStart;
 		this.onFinish = onFinish;
 		this.onError = onError;
@@ -40,4 +49,5 @@ export class Song implements SongData{
 
 		return createAudioResource(stream.stream, { inputType: stream.type });
 	}
+
 }

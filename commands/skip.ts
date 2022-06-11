@@ -18,20 +18,20 @@ module.exports = {
 			return;
 		}
 
-		const nextSong = musicPlayer.getNextSong();
 		musicPlayer.skip();
 		const skippedEmbed = EmbedUtils.buildEmbed()
 			.setDescription(`Skipped`)
 			.setColor(`#eb7e18`);
 		await interaction.reply({ embeds: [skippedEmbed.build()] });
 
-		if (!(nextSong)) {
+		const nextSong = musicPlayer.getCurrentSong()
+		if (!nextSong) {
 			return;
 		}
 
 		const nowPlayingEmbed = EmbedUtils.buildEmbed()
 			.setTitle(`Yessir`)
-			.setDescription(`Now Playing: ${nextSong.title}`)
+			.setDescription(`Now Playing: ${musicPlayer.getCurrentSong()!.title}`)
 			.setColor(`#1cafc5`);
 		await interaction.followUp({ embeds: [nowPlayingEmbed.build()] });
 	}

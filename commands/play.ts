@@ -46,20 +46,20 @@ module.exports = {
 		responseEmbed.setTitle(`Playing ${searchQuery}`)
 			.setDescription(`Searching for ${searchQuery}`)
 			.setColor(`#eb7e18`)
-		await interaction.reply({ embeds: [responseEmbed.build()] })
+		await interaction.reply({ embeds: [responseEmbed.build()], ephemeral: true })
 
 		// Call YouTube client to get search results
 		const video = await youtubeClient.getVideo(searchQuery!)
 		const videoId = video.id
 		const videoTitle = video.title
 
-		responseEmbed.setDescription(`Song retrieved with id: ${videoId}`).setColor(`#12a32a`);
-		await interaction.editReply({ embeds: [responseEmbed.build()] });
-
 		// Create a Song object with information necessary for playing the track
 		const song = new Song({
 			id: videoId!,
 			title: videoTitle!,
+			duration: video.durationInSec,
+			thumbnail: video.thumbnails.at(0)?.url!,
+			requestor: user.displayName,
 			onStart: () => {},
 			onFinish: () => {},
 			onError: () => {}
@@ -68,18 +68,33 @@ module.exports = {
 		// Retrieves this servers player from the players Map. Create and store one if none exists
 		let musicPlayer = client.getPlayer(interaction.guildId!);
 		if (!musicPlayer) {
-			musicPlayer = new MusicPlayer();
+			musicPlayer = new MusicPlayer(interaction);
 			client.setPlayer(interaction.guildId!, musicPlayer);
 		}
 
+		// Generate spotify recommendations and return discord buttons
+		//const recResponse = await this.generateRecommendations(
+		//	client,
+		//	interaction,
+		//	searchQuery!,
+		//	musicPlayer
+		//);
+		//const recButtons = recResponse[0];
+		//const buttonCollector = recResponse[1];
+
+		//Indicate what is to be done when the button 'expires'
+		//buttonCollector?.on('end', () => {
+		//	interaction.editReply({
+		//		embeds: [responseEmbed.build()],
+		//		components: []
+		//	})
+		//});
+
 		// Add the song to a music queue if something is playing. If not, play queue.
-		// Added into if-else so all calls get recommendations
 		musicPlayer.addToQueue(song)
 		if (musicPlayer.isPlaying()) {
-			responseEmbed.setTitle(`Yessir`)
-				.setDescription(`Added ${song.title} to queue in position ${musicPlayer.getQueueSize()}`)
-				.setColor(`#1cafc5`);
-			await interaction.editReply({ embeds: [responseEmbed.build()] });
+			await musicPlayer.embedQueue(song)
+			return;
 		} else {
 			// Check if voice connection exists and joins if not. Connect player to connection
 			let connection = getVoiceConnection(interaction.guildId!);
@@ -94,36 +109,10 @@ module.exports = {
 			}
 
 			connection?.subscribe(musicPlayer.getAudioPlayer());
+
 			await musicPlayer.play();
-
-			// Create Now Playing message and give song recs as buttons
-			responseEmbed.setTitle(`Yessir`)
-				.setDescription(`Now Playing: ${song.title}`)
-				.setColor(`#1cafc5`);
 		}
-
-		// Generate spotify recommendations and return discord buttons
-		const recResponse = await this.generateRecommendations(
-			client,
-			interaction,
-			searchQuery!,
-			musicPlayer
-		);
-		const recButtons = recResponse[0];
-		const buttonCollector = recResponse[1];
-
-		// Indicate what is to be done when the button 'expires'
-		buttonCollector?.on('end', () => {
-			interaction.editReply({
-				embeds: [responseEmbed.build()],
-				components: []
-			})
-		});
-
-		await interaction.editReply({
-			embeds: [responseEmbed.build()],
-			components: [recButtons]
-		})
+		await musicPlayer.generateEmbed();
 	},
 	generateRecommendations: async function (
 		client: RosenClient,
@@ -172,6 +161,9 @@ module.exports = {
 					musicPlayer!.addToQueue(new Song({
 						id: video.id!,
 						title: recs[0]['name'],
+						duration: video.durationInSec,
+						thumbnail: video.thumbnails.at(0)?.url!,
+						requestor: `${client.user!.tag}`,
 						onStart: () => {},
 						onFinish: () => {},
 						onError: () => {}
@@ -184,6 +176,9 @@ module.exports = {
 					musicPlayer?.addToQueue(new Song({
 						id: video.id!,
 						title: recs[1]['name'],
+						duration: video.durationInSec,
+						thumbnail: video.thumbnails.at(0)?.url!,
+						requestor: `${client.user!.tag}`,
 						onStart: () => {},
 						onFinish: () => {},
 						onError: () => {}
@@ -196,6 +191,9 @@ module.exports = {
 					musicPlayer?.addToQueue(new Song({
 						id: video.id!,
 						title: recs[2]['name'],
+						duration: video.durationInSec,
+						thumbnail: video.thumbnails.at(0)?.url!,
+						requestor: `${client.user!.tag}`,
 						onStart: () => {},
 						onFinish: () => {},
 						onError: () => {}
