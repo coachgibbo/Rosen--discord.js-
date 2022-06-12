@@ -5,8 +5,8 @@ import {CommandInteraction, TextChannel} from "discord.js";
 import {RosenClient} from "../RosenClient";
 
 export class MusicPlayer {
+	public readonly client: RosenClient;
 	private audioPlayer: AudioPlayer;
-	private client: RosenClient;
 	private guildId: string;
 	private queue: Song[];
 	private currentSong: Song | null;
@@ -74,8 +74,9 @@ export class MusicPlayer {
 		return this.queue;
 	}
 
-	public skip(): void {
+	public async skip() {
 		this.audioPlayer.stop(true)
+		await this.musicPlayerEmbed.log('Skipped', false)
 	}
 
 	public isPlaying(): boolean {

@@ -18,21 +18,13 @@ module.exports = {
 			return;
 		}
 
-		musicPlayer.skip();
+		await musicPlayer.skip();
 		const skippedEmbed = EmbedUtils.buildEmbed()
 			.setDescription(`Skipped`)
 			.setColor(`#eb7e18`);
 		await interaction.reply({ embeds: [skippedEmbed.build()] });
-
-		const nextSong = musicPlayer.getCurrentSong()
-		if (!nextSong) {
-			return;
-		}
-
-		const nowPlayingEmbed = EmbedUtils.buildEmbed()
-			.setTitle(`Yessir`)
-			.setDescription(`Now Playing: ${musicPlayer.getCurrentSong()!.title}`)
-			.setColor(`#1cafc5`);
-		await interaction.followUp({ embeds: [nowPlayingEmbed.build()] });
+		setTimeout(async () => {
+			await interaction.deleteReply();
+		})
 	}
 }

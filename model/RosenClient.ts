@@ -3,6 +3,7 @@ import { MusicPlayer } from "./music/MusicPlayer";
 import { SpotifyClient } from "./apis/SpotifyClient";
 import {YoutubeClient} from "./apis/YoutubeClient";
 import {VoiceConnection} from "@discordjs/voice";
+const discordModals = require('discord-modals');
 
 export class RosenClient extends Client {
 	private commands: Collection<any, any>;
@@ -14,6 +15,7 @@ export class RosenClient extends Client {
 
 	constructor(props: ClientOptions) {
 		super(props);
+		discordModals(this);
 
 		this.commands = new Collection();
 		this.players = new Map<Snowflake, MusicPlayer>();
@@ -40,5 +42,9 @@ export class RosenClient extends Client {
 
 	public setCommand(name: string, command: any) {
 		this.commands.set(name, command);
+	}
+
+	public getCommand(name: string) {
+		return this.commands.get(name);
 	}
 }

@@ -22,6 +22,7 @@ import { RosenClient } from "../model/RosenClient";
 import { joinUtils } from "../utils/JoinUtils";
 import {YouTubeVideo} from "play-dl";
 import {EmbedUtils} from "../utils/EmbedUtils";
+import {ModalSubmitInteraction} from "discord-modals";
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
@@ -41,12 +42,18 @@ module.exports = {
 			return;
 		}
 
-		// Extract search query and update caller on command status
-		const searchQuery = interaction.options.getString('song');
+		// Modals being introduced in discord.js v14, having to use external discord-modals for this functionality.
+		// Hence-why there is no ts compatibility between CommandInteraction and ModalSubmitInteraction
+		let searchQuery = ""
+		if (interaction.type == 'MODAL_SUBMIT') {
+			searchQuery = (interaction as any as ModalSubmitInteraction).getTextInputValue('song-input')
+		} else {
+			searchQuery = interaction.options.getString('song')!;
+		}
 		responseEmbed.setTitle(`Playing ${searchQuery}`)
 			.setDescription(`Searching for ${searchQuery}`)
 			.setColor(`#eb7e18`)
-		await interaction.reply({ embeds: [responseEmbed.build()], ephemeral: true })
+		await interaction.reply({ embeds: [responseEmbed.build()] })
 
 		// Call YouTube client to get search results
 		const video = await youtubeClient.getVideo(searchQuery!)
@@ -72,24 +79,6 @@ module.exports = {
 			client.setPlayer(interaction.guildId!, musicPlayer);
 		}
 
-		// Generate spotify recommendations and return discord buttons
-		//const recResponse = await this.generateRecommendations(
-		//	client,
-		//	interaction,
-		//	searchQuery!,
-		//	musicPlayer
-		//);
-		//const recButtons = recResponse[0];
-		//const buttonCollector = recResponse[1];
-
-		//Indicate what is to be done when the button 'expires'
-		//buttonCollector?.on('end', () => {
-		//	interaction.editReply({
-		//		embeds: [responseEmbed.build()],
-		//		components: []
-		//	})
-		//});
-
 		// Add the song to a music queue if something is playing. If not, play queue.
 		musicPlayer.addToQueue(song)
 		if (musicPlayer.isPlaying()) {
@@ -113,6 +102,7 @@ module.exports = {
 			await musicPlayer.play();
 		}
 		await musicPlayer.generateEmbed();
+		await interaction.deleteReply();
 	},
 	generateRecommendations: async function (
 		client: RosenClient,
