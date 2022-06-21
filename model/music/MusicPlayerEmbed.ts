@@ -5,23 +5,28 @@ import {
     MessageActionRow,
     MessageButton,
     MessageEmbed,
+    MessageSelectMenu,
+    SelectMenuInteraction,
     TextChannel,
 } from "discord.js";
 import {Song} from "./Song";
 const skipCommand =  require("../../commands/skip");
 import {Modal, TextInputComponent, showModal} from 'discord-modals';
+import {DateTimeUtils} from "../../utils/DateTimeUtils";
 
 const bar = require(`stylish-text`);
 
 export class MusicPlayerEmbed {
     private musicPlayer: MusicPlayer;
     private embedObject: MessageEmbed;
-    private embedMessage: Message | null;
     private channel: TextChannel;
     private progressBar: any;
     private currentTimer: NodeJS.Timer | null;
     private radioToggle: boolean;
     private controlRow: MessageActionRow;
+    private recommendationRow: MessageActionRow;
+    public embedMessage: Message | null;
+
 
     constructor(musicPlayer: MusicPlayer, channel: TextChannel) {
         this.musicPlayer = musicPlayer;
@@ -31,6 +36,7 @@ export class MusicPlayerEmbed {
         this.currentTimer = null;
         this.radioToggle = false;
         this.controlRow = this.initializeControls();
+        this.recommendationRow = this.initializeRecommendations();
         this.initializeProgressBar();
         this.initializeEmbed();
     }
@@ -87,7 +93,13 @@ export class MusicPlayerEmbed {
                     break;
 
                 case 'refresh-recs':
-                    console.log('refresh-recs')
+                    if (this.musicPlayer.getCurrentSong() == null) {
+                        await this.log("No songs to get recommendations from", false)
+                        break;
+                    } else {
+                        await this.updateRecommendations(this.musicPlayer.getCurrentSong()!)
+                        await this.log("Refreshed Recommendations", false);
+                    }
                     break;
 
                 case 'radio-toggle':
@@ -107,6 +119,28 @@ export class MusicPlayerEmbed {
         return controlRow;
     }
 
+    private initializeRecommendations() {
+        const recommendationRow =  new MessageActionRow().addComponents(
+            new MessageSelectMenu()
+                .setCustomId('recommendation-dropdown')
+                .setPlaceholder('Queue a song to get some recommendations')
+                .setDisabled(true)
+                .setOptions({
+                    label: 'Rec 1',
+                    value: 'Recommendation 1'
+                })
+        );
+
+        this.channel!.createMessageComponentCollector().on('collect', async (selectInteraction: SelectMenuInteraction) => {
+            if (!selectInteraction.isSelectMenu()) {
+                return;
+            }
+            this.musicPlayer.client.getCommand('play').execute(selectInteraction)
+        });
+
+        return recommendationRow;
+    }
+
     private initializeProgressBar() {
         this.progressBar = bar;
         this.progressBar.default.full = "█";
@@ -121,8 +155,8 @@ export class MusicPlayerEmbed {
         let end = this.musicPlayer.getCurrentSong()!.duration;
         let value = Math.floor(current * (100 / end) / 5);
 
-        this.embedObject.fields.find(field => field.name == "Playback Position:")!.value = `${this.convertTime(current)} - [${bar.progress(20, value)}] - ${this.convertTime(end!)}`
-        this.embedMessage = await this.channel.send({embeds: [this.embedObject], components: [this.controlRow]});
+        this.embedObject.fields.find(field => field.name == "Playback Position:")!.value = `${DateTimeUtils.convertNumberToTime(current)} - [${bar.progress(20, value)}] - ${DateTimeUtils.convertNumberToTime(end!)}`
+        this.embedMessage = await this.channel.send({embeds: [this.embedObject], components: [this.controlRow, this.recommendationRow]});
 
         let updateCounter = 0;
         let intervalTime = (end / 20) * 1000
@@ -133,8 +167,8 @@ export class MusicPlayerEmbed {
                 current = Math.floor(this.musicPlayer.getCurrentSongTime() / 1000);
                 value = Math.floor(current * (100 / end) / 5);
                 end = this.musicPlayer.getCurrentSong()!.duration;
-                this.embedObject.fields.find(field => field.name == "Playback Position:")!.value = `${this.convertTime(current)} - [${bar.progress(20, value)}] - ${this.convertTime(end!)}`
-                await this.embedMessage!.edit({embeds: [this.embedObject], components: [this.controlRow]});
+                this.embedObject.fields.find(field => field.name == "Playback Position:")!.value = `${DateTimeUtils.convertNumberToTime(current)} - [${bar.progress(20, value)}] - ${DateTimeUtils.convertNumberToTime(end!)}`
+                await this.embedMessage!.edit({embeds: [this.embedObject], components: [this.controlRow, this.recommendationRow]});
             }
         }, intervalTime + 500)
 
@@ -149,8 +183,9 @@ export class MusicPlayerEmbed {
 
     public async updateSongPlaying(song: Song) {
         this.embedObject.setColor(`#12bd12`)
-        this.embedObject.fields.find(field => field.name == "Currently Playing:")!.value = `${song.title} - (${this.convertTime(song.duration)})`;
+        this.embedObject.fields.find(field => field.name == "Currently Playing:")!.value = `${song.title} - (${DateTimeUtils.convertNumberToTime(song.duration)})`;
         this.embedObject.fields.find(field => field.name == "Requested By:")!.value = `@${song.requestor}`;
+        this.embedObject.fields.find(field => field.name == "Playback Position:")!.value = `0:00 - [${bar.progress(20, 0)}] - ${DateTimeUtils.convertNumberToTime(song.duration)}`
 
         let upNextField = this.embedObject.fields.find(field => field.name == "Up Next:");
         let nextSong = this.musicPlayer.getQueue().at(0)
@@ -161,8 +196,29 @@ export class MusicPlayerEmbed {
         }
 
         this.embedObject.setThumbnail(song.thumbnail);
-        this.embedObject.fields.find(field => field.name == "Log:")!.value = `Now playing ${song.title}`
-        await this.embedMessage?.edit({embeds: [this.embedObject], components: [this.controlRow]})
+        this.embedObject.fields.find(field => field.name == "Log:")!.value = `Now playing ${song.title}`;
+        await this.updateRecommendations(song);
+        await this.embedMessage?.edit({embeds: [this.embedObject], components: [this.controlRow, this.recommendationRow]})
+    }
+
+    public async updateRecommendations(song: Song) {
+        const dropdown = this.recommendationRow.components.at(0) as MessageSelectMenu;
+        const recommendations = await this.musicPlayer.client.getSpotifyClient().generateRecommendations(song.searchQuery);
+        let options = [];
+        let recCounter = 1;
+        for (let rec of recommendations) {
+            options.push({
+                label: `${rec['name']}`.substring(0, 80),
+                description: `${rec['artists'][0]['name']}`,
+                value: `${rec['name']} ${rec['artists'][0]['name']}`.substring(0, 80)
+            })
+            recCounter++;
+        }
+        this.musicPlayer.setRadioSong(recommendations[0]['name'])
+        dropdown.setOptions(); // Clear
+        dropdown.addOptions(options);
+        dropdown.setDisabled(false);
+        dropdown.setPlaceholder('Choose a song to add to the queue')
     }
 
     public async updateNothingPlaying() {
@@ -184,7 +240,7 @@ export class MusicPlayerEmbed {
         } else {
             upNextField!.value = nextSong.title;
         }
-        await this.log(`Added ${song.title} to queue in position ${this.musicPlayer.getQueueSize()}`, true);
+        await this.log(`Added ${song.title} to queue in position ${this.musicPlayer.getQueueSize()}`, false);
     }
 
     public async updateInactive() {
@@ -197,13 +253,11 @@ export class MusicPlayerEmbed {
         if (bumpRequired) {
             await this.bumpMessage();
         } else {
-            this.embedMessage?.edit({embeds: [this.embedObject], components: [this.controlRow]})
+            this.embedMessage?.edit({embeds: [this.embedObject], components: [this.controlRow, this.recommendationRow]})
         }
     }
 
-    private convertTime(time: number): string {
-        var minutes = Math.floor(time / 60);
-        var seconds = "0" + (time - minutes * 60);
-        return minutes.toString().slice(-2) + ":" + seconds.slice(-2);
+    public isRadioOn() {
+        return this.radioToggle;
     }
 }

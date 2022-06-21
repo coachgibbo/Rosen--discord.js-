@@ -8,21 +8,14 @@
  * 		6. Plays the song
  */
 import { SlashCommandBuilder } from "@discordjs/builders";
-import {
-	ButtonInteraction,
-	CommandInteraction,
-	GuildMember, InteractionCollector,
-	MessageActionRow,
-	MessageButton, MessageComponentInteraction,
-} from "discord.js";
+import { CommandInteraction, GuildMember } from "discord.js";
 import { getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
-import { Song } from "../model/music/Song";
 import { MusicPlayer } from "../model/music/MusicPlayer";
 import { RosenClient } from "../model/RosenClient";
 import { joinUtils } from "../utils/JoinUtils";
-import {YouTubeVideo} from "play-dl";
-import {EmbedUtils} from "../utils/EmbedUtils";
-import {ModalSubmitInteraction} from "discord-modals";
+import { EmbedUtils } from "../utils/EmbedUtils";
+import { ModalSubmitInteraction } from "discord-modals";
+import { MusicUtils } from "../utils/MusicUtils";
 
 module.exports = {
 	data: new SlashCommandBuilder() // Discord Command Builder
@@ -47,6 +40,8 @@ module.exports = {
 		let searchQuery = ""
 		if (interaction.type == 'MODAL_SUBMIT') {
 			searchQuery = (interaction as any as ModalSubmitInteraction).getTextInputValue('song-input')
+		} else if (interaction.isSelectMenu()){
+			searchQuery = interaction.values.at(0)!;
 		} else {
 			searchQuery = interaction.options.getString('song')!;
 		}
@@ -57,20 +52,7 @@ module.exports = {
 
 		// Call YouTube client to get search results
 		const video = await youtubeClient.getVideo(searchQuery!)
-		const videoId = video.id
-		const videoTitle = video.title
-
-		// Create a Song object with information necessary for playing the track
-		const song = new Song({
-			id: videoId!,
-			title: videoTitle!,
-			duration: video.durationInSec,
-			thumbnail: video.thumbnails.at(0)?.url!,
-			requestor: user.displayName,
-			onStart: () => {},
-			onFinish: () => {},
-			onError: () => {}
-		});
+		const song = MusicUtils.videoToSong(video, searchQuery, user.displayName);
 
 		// Retrieves this servers player from the players Map. Create and store one if none exists
 		let musicPlayer = client.getPlayer(interaction.guildId!);
@@ -83,6 +65,7 @@ module.exports = {
 		musicPlayer.addToQueue(song)
 		if (musicPlayer.isPlaying()) {
 			await musicPlayer.embedQueue(song)
+			await interaction.deleteReply();
 			return;
 		} else {
 			// Check if voice connection exists and joins if not. Connect player to connection
@@ -101,99 +84,9 @@ module.exports = {
 
 			await musicPlayer.play();
 		}
-		await musicPlayer.generateEmbed();
+		if (!(musicPlayer.embedExists())){
+			await musicPlayer.generateEmbed();
+		}
 		await interaction.deleteReply();
-	},
-	generateRecommendations: async function (
-		client: RosenClient,
-		interaction: CommandInteraction,
-		searchQuery: string,
-		musicPlayer: MusicPlayer
-	): Promise<[MessageActionRow, InteractionCollector<MessageComponentInteraction>]> {
-		// Spotify Recommendations
-		// Get the client and generate recommendations
-		const spotifyClient = client.getSpotifyClient();
-		const recs = await spotifyClient.generateRecommendations(searchQuery!);
-
-		// Create a button row with the three recommendations
-		const choose = new MessageActionRow()
-			.addComponents(
-				new MessageButton()
-					.setCustomId('opt1')
-					.setLabel(`${recs[0]['name']} - ${recs[0]['artists'][0]['name']}`.substring(0, 80))
-					.setStyle("PRIMARY"),
-				new MessageButton()
-					.setCustomId('opt2')
-					.setLabel(`${recs[1]['name']} - ${recs[1]['artists'][0]['name']}`.substring(0, 80))
-					.setStyle("PRIMARY"),
-				new MessageButton()
-					.setCustomId('opt3')
-					.setLabel(`${recs[2]['name']} - ${recs[2]['artists'][0]['name']}`.substring(0, 80))
-					.setStyle("PRIMARY"),
-			);
-
-		// Create a collector that will watch for button presses
-		const buttonCollector = interaction.channel?.createMessageComponentCollector({
-			max: 3,
-			time: 1000 * 15
-		});
-
-		const youtubeClient = client.getYoutubeClient();
-
-		// Indicate what is to be done when a buttonInteraction is collected
-		buttonCollector?.on('collect', (bInteraction: ButtonInteraction) => {
-			const buttonEmbed = EmbedUtils.buildEmbed()
-				.setTitle(`Added to Queue`)
-				.setColor(`#1cafc5`);
-
-			if (bInteraction.customId === 'opt1') {
-				youtubeClient.getVideo(`${recs[0]['name']} ${recs[0]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
-					musicPlayer!.addToQueue(new Song({
-						id: video.id!,
-						title: recs[0]['name'],
-						duration: video.durationInSec,
-						thumbnail: video.thumbnails.at(0)?.url!,
-						requestor: `${client.user!.tag}`,
-						onStart: () => {},
-						onFinish: () => {},
-						onError: () => {}
-					}));
-					buttonEmbed.setDescription(`Queued ${recs[0]['name']} in position ${musicPlayer?.getQueueSize()}`);
-					bInteraction.reply({ embeds: [buttonEmbed.build()] })
-				});
-			} else if (bInteraction.customId === 'opt2') {
-				youtubeClient.getVideo(`${recs[1]['name']} ${recs[1]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
-					musicPlayer?.addToQueue(new Song({
-						id: video.id!,
-						title: recs[1]['name'],
-						duration: video.durationInSec,
-						thumbnail: video.thumbnails.at(0)?.url!,
-						requestor: `${client.user!.tag}`,
-						onStart: () => {},
-						onFinish: () => {},
-						onError: () => {}
-					}));
-					buttonEmbed.setDescription(`Queued ${recs[1]['name']} in position ${musicPlayer?.getQueueSize()}`);
-					bInteraction.reply({ embeds: [buttonEmbed.build()] })
-				});
-			} else if (bInteraction.customId === 'opt3') {
-				youtubeClient.getVideo(`${recs[2]['name']} ${recs[2]['artists'][0]['name']}`).then((video: YouTubeVideo) => {
-					musicPlayer?.addToQueue(new Song({
-						id: video.id!,
-						title: recs[2]['name'],
-						duration: video.durationInSec,
-						thumbnail: video.thumbnails.at(0)?.url!,
-						requestor: `${client.user!.tag}`,
-						onStart: () => {},
-						onFinish: () => {},
-						onError: () => {}
-					}));
-					buttonEmbed.setDescription(`Queued ${recs[2]['name']} in position ${musicPlayer?.getQueueSize()}`);
-					bInteraction.reply({ embeds: [buttonEmbed.build()] })
-				});
-			}
-		});
-
-		return [choose, buttonCollector!];
 	}
 }

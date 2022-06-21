@@ -3,6 +3,7 @@ import { Song } from "./Song"
 import {MusicPlayerEmbed} from "./MusicPlayerEmbed";
 import {CommandInteraction, TextChannel} from "discord.js";
 import {RosenClient} from "../RosenClient";
+import {MusicUtils} from "../../utils/MusicUtils";
 
 export class MusicPlayer {
 	public readonly client: RosenClient;
@@ -10,8 +11,10 @@ export class MusicPlayer {
 	private guildId: string;
 	private queue: Song[];
 	private currentSong: Song | null;
+	private radioSong: string | null;
 	private currentStream: AudioResource | null;
 	private musicPlayerEmbed: MusicPlayerEmbed;
+	private inactiveTimer: NodeJS.Timer | null;
 
 	public constructor(interaction: CommandInteraction) {
 		this.audioPlayer = createAudioPlayer();
@@ -19,8 +22,10 @@ export class MusicPlayer {
 		this.guildId = interaction.guildId!;
 		this.queue = [];
 		this.currentSong = null;
+		this.radioSong = null;
 		this.currentStream = null;
 		this.musicPlayerEmbed = new MusicPlayerEmbed(this, interaction.channel as TextChannel);
+		this.inactiveTimer = null;
 
 		// @ts-ignore
 		this.audioPlayer.on('stateChange',async (oldState, newState) => {
@@ -34,17 +39,23 @@ export class MusicPlayer {
 
 	public async play() {
 		if (this.queue.length === 0) {
-			console.log("The queue is empty");
-			await this.musicPlayerEmbed.updateNothingPlaying();
-			setTimeout(async () => {
-				getVoiceConnection(this.guildId)?.destroy();
-				await this.musicPlayerEmbed.updateInactive();
-			}, 60000)
-			return;
+			if (this.musicPlayerEmbed.isRadioOn()) {
+				console.log("Playing next song from Rosen Radio");
+				await this.playRadio();
+			} else {
+				console.log("The queue is empty");
+				await this.musicPlayerEmbed.updateNothingPlaying();
+				this.inactiveTimer = setTimeout(async () => {
+					getVoiceConnection(this.guildId)?.destroy();
+					await this.musicPlayerEmbed.updateInactive();
+				}, 300000)
+				return;
+			}
 		} else if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
 			console.log("Something's already playing")
 			return;
 		}
+		clearTimeout(this.inactiveTimer!);
 
 		const nextSong = this.queue.shift();
 		const nextStream = await nextSong?.createAudioResource();
@@ -52,6 +63,12 @@ export class MusicPlayer {
 		this.currentStream = nextStream!;
 		this.currentSong = nextSong!;
 		await this.musicPlayerEmbed.updateSongPlaying(nextSong!);
+	}
+
+	public async playRadio() {
+		const video = await this.client.getYoutubeClient().getVideo(this.radioSong!);
+		const song = MusicUtils.videoToSong(video, this.radioSong!, 'RosenRadio')
+		this.addToQueue(song);
 	}
 
 	public async generateEmbed() {
@@ -93,5 +110,13 @@ export class MusicPlayer {
 
 	public getCurrentSongTime(): number {
 		return this.currentStream?.playbackDuration!;
+	}
+
+	public setRadioSong(song: string): void {
+		this.radioSong = song;
+	}
+
+	public embedExists() {
+		return this.musicPlayerEmbed.embedMessage != null;
 	}
 }

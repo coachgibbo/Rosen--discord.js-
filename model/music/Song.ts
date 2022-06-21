@@ -16,6 +16,7 @@ export interface SongData {
 	duration: number;
 	thumbnail: string;
 	requestor: string;
+	searchQuery: string;
 	onStart: () => void;
 	onFinish: () => void;
 	onError: (error: Error) => void;
@@ -28,17 +29,19 @@ export class Song implements SongData{
 	public readonly duration: number;
 	public readonly thumbnail: string;
 	public readonly requestor: string;
+	public readonly searchQuery: string;
 	public readonly onStart: () => void;
 	public readonly onFinish: () => void;
 	public readonly onError: (error: Error) => void;
 
-	constructor({ id, duration, thumbnail, requestor, title, onStart, onFinish, onError }: SongData) {
+	constructor({ id, duration, thumbnail, requestor, searchQuery, title, onStart, onFinish, onError }: SongData) {
 		this.id = id;
 		this.url = "https://www.youtube.com/watch?v=" + id;
 		this.title = title;
 		this.duration = duration;
 		this.thumbnail = thumbnail;
 		this.requestor = requestor;
+		this.searchQuery = searchQuery;
 		this.onStart = onStart;
 		this.onFinish = onFinish;
 		this.onError = onError;
