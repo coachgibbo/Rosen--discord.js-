@@ -42,13 +42,13 @@ export class MusicPlayer {
 			if (this.musicPlayerEmbed.isRadioOn()) {
 				console.log("Playing next song from Rosen Radio");
 				await this.playRadio();
+				if (!this.radioSong) {
+					await this.startInactiveTimer();
+					return;
+				}
 			} else {
 				console.log("The queue is empty");
-				await this.musicPlayerEmbed.updateNothingPlaying();
-				this.inactiveTimer = setTimeout(async () => {
-					getVoiceConnection(this.guildId)?.destroy();
-					await this.musicPlayerEmbed.updateInactive();
-				}, 300000)
+				await this.startInactiveTimer();
 				return;
 			}
 		} else if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
@@ -66,6 +66,11 @@ export class MusicPlayer {
 	}
 
 	public async playRadio() {
+		if (!this.radioSong) {
+			await this.musicPlayerEmbed.toggleRadio();
+			return;
+		}
+
 		const video = await this.client.getYoutubeClient().getVideo(this.radioSong!);
 		const song = MusicUtils.videoToSong(video, this.radioSong!, 'RosenRadio')
 		this.addToQueue(song);
@@ -112,11 +117,19 @@ export class MusicPlayer {
 		return this.currentStream?.playbackDuration!;
 	}
 
-	public setRadioSong(song: string): void {
+	public setRadioSong(song: string | null): void {
 		this.radioSong = song;
 	}
 
 	public embedExists() {
 		return this.musicPlayerEmbed.embedMessage != null;
+	}
+
+	private async startInactiveTimer() {
+		await this.musicPlayerEmbed.updateNothingPlaying();
+		this.inactiveTimer = setTimeout(async () => {
+			getVoiceConnection(this.guildId)?.destroy();
+			await this.musicPlayerEmbed.updateInactive();
+		}, 300000);
 	}
 }

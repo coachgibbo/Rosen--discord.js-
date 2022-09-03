@@ -16,6 +16,7 @@ export class SpotifyClient {
 		});
 
 		this.bearer = "";
+		this.regenerateToken().then(r => {});
 	}
 
 	/**
@@ -43,6 +44,10 @@ export class SpotifyClient {
 		.catch(async (error) => {
 			// If error occurs with code == 401, we know the bearer token is invalid or expired and refresh it
 			// We then call the function again
+			if (error instanceof TypeError) {
+				return []
+			}
+
 			if (error['body']['error']['status'] == 401) {
 				await this.regenerateToken();
 				recommendations = this.generateRecommendations(query);

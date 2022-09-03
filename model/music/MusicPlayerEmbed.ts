@@ -103,15 +103,7 @@ export class MusicPlayerEmbed {
                     break;
 
                 case 'radio-toggle':
-                    if (!this.radioToggle) {
-                        this.radioToggle = true;
-                        (this.controlRow.components.at(3) as MessageButton).setStyle(3).setLabel('Radio (on)');
-                        await this.log("Radio on", false);
-                    } else {
-                        this.radioToggle = false;
-                        (this.controlRow.components.at(3) as MessageButton).setStyle(4).setLabel('Radio (off)');
-                        await this.log("Radio off", false);
-                    }
+                    await this.toggleRadio()
                     break;
             }
         })
@@ -204,6 +196,17 @@ export class MusicPlayerEmbed {
     public async updateRecommendations(song: Song) {
         const dropdown = this.recommendationRow.components.at(0) as MessageSelectMenu;
         const recommendations = await this.musicPlayer.client.getSpotifyClient().generateRecommendations(song.searchQuery);
+        if (recommendations.length == 0) {
+            dropdown.setOptions({
+                label: 'Rec 1',
+                value: 'Recommendation 1'
+            })
+            dropdown.setDisabled(true);
+            dropdown.setPlaceholder('No recommendations found');
+            this.musicPlayer.setRadioSong(null);
+            return;
+        }
+
         let options = [];
         let recCounter = 1;
         for (let rec of recommendations) {
@@ -259,5 +262,17 @@ export class MusicPlayerEmbed {
 
     public isRadioOn() {
         return this.radioToggle;
+    }
+
+    public async toggleRadio() {
+        if (!this.radioToggle) {
+            this.radioToggle = true;
+            (this.controlRow.components.at(3) as MessageButton).setStyle(3).setLabel('Radio (on)');
+            await this.log("Radio on", false);
+        } else {
+            this.radioToggle = false;
+            (this.controlRow.components.at(3) as MessageButton).setStyle(4).setLabel('Radio (off)');
+            await this.log("Radio off", false);
+        }
     }
 }
